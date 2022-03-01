@@ -1,27 +1,49 @@
 package main
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
+	"go-api-friends/controller"
 	"log"
 	"net/http"
-	"phonebook-api/controller"
-
-	"github.com/gorilla/mux"
+	"os"
 )
 
 // fun
-func homeLink(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welcome home!")
+func homeLink(c *gin.Context) {
+	c.JSON(200, "Welcome home!")
+}
+
+func init() {
+	// Load values from .env into the system
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
 }
 
 func main() {
-	router := mux.NewRouter().StrictSlash(true)
+	router := gin.New()
 	server := controller.NewPhoneServer()
-	router.HandleFunc("/", homeLink)
-	router.HandleFunc("/user", server.GetUsers).Methods("GET")
-	router.HandleFunc("/user/{id:[0-9]+}", server.GetUserById).Methods("GET")
-	router.HandleFunc("/user", server.AddUser).Methods("POST")
-	router.HandleFunc("/city/{city}", server.GetUserFromCity).Methods("GET")
-	router.HandleFunc("/friend", server.AddRelations).Methods("POST")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	router.GET("/", homeLink)
+	router.GET("/user", server.GetUsers)
+	router.GET("/user/:id", server.GetUserById)
+	router.POST("/user", server.AddUser)
+	router.GET("/city/:city", server.GetUserFromCity)
+
+	router.POST("/login", server.LoginHandler)
+
+	authorized := router.Group("/")
+	authorized.GET("/refresh_token", server.RefreshHandler)
+	authorized.Use(server.AuthMiddleWare())
+	{
+		authorized.POST("/city", server.ChangeCity)
+		authorized.POST("/status", server.ChangeStatus)
+	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }

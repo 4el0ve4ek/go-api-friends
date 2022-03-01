@@ -1,71 +1,94 @@
 package controller
 
 import (
-	"encoding/json"
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
+	"go-api-friends/model"
 	"net/http"
-	"phonebook-api/model"
 	"strconv"
 )
 
 // GetUsers returns to sender all saved users using json format.
-func (ps *PhoneServer) GetUsers(w http.ResponseWriter, r *http.Request) {
-	jsonResponse(w, ps.store.GetAllUser())
+func (ps *PhoneServer) GetUsers(c *gin.Context) {
+	c.JSON(200, ps.store.GetAllUser())
 }
 
 // GetUserById returns to sender user with id from request.
-func (ps *PhoneServer) GetUserById(w http.ResponseWriter, r *http.Request) {
-	id, _ := strconv.Atoi(mux.Vars(r)["id"])
+func (ps *PhoneServer) GetUserById(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	user, err := ps.store.GetUser(id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	jsonResponse(w, user)
-}
-
-// writes to response json of object v.
-func jsonResponse(w http.ResponseWriter, v any) {
-	js, err := json.Marshal(v)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
+	c.JSON(200, user)
 }
 
 // AddUser adds new user with name and city from body.
-func (ps *PhoneServer) AddUser(w http.ResponseWriter, r *http.Request) {
+func (ps *PhoneServer) AddUser(c *gin.Context) {
 	type RequestUser struct {
-		Name string `json:"name"`
-		City string `json:"city"`
+		Name     string `json:"name"`
+		Password string `json:"password"`
 	}
 
 	var user RequestUser
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&user); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ps.store.AddUser(user.Name, user.City)
+	ps.store.AddUser(user.Name, user.Password)
+	c.String(200, "OK")
 }
 
 // GetUserFromCity returns users from certain city.
-func (ps *PhoneServer) GetUserFromCity(w http.ResponseWriter, r *http.Request) {
+func (ps *PhoneServer) GetUserFromCity(c *gin.Context) {
 	users := ps.store.GetAllUser()
-	requiredCity := mux.Vars(r)["city"]
-	result := make([]*model.User, 8)
+	requiredCity := c.Param("city")
+	result := make([]*model.User, 0)
 	for _, user := range users {
 		if user.City == requiredCity {
 			result = append(result, user)
 		}
 	}
-	jsonResponse(w, result)
+	c.JSON(200, result)
+}
+
+func (ps *PhoneServer) ChangeCity(c *gin.Context) {
+	type RequestedCity struct {
+		City string `json:"city"`
+	}
+	var field RequestedCity
+	if err := c.ShouldBindJSON(&field); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user := ps.authMiddleWare.authMW.IdentityHandler(c).(*model.User)
+	user.City = field.City
+	ps.store.UpdateUser(user)
+
+	c.JSON(200, user)
+}
+
+func (ps *PhoneServer) ChangeStatus(c *gin.Context) {
+	type RequestedStatus struct {
+		Status string `json:"status"`
+	}
+	var field RequestedStatus
+	if err := c.ShouldBindJSON(&field); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	user := ps.authMiddleWare.authMW.IdentityHandler(c).(*model.User)
+	user.Status = field.Status
+	ps.store.UpdateUser(user)
+
+	c.JSON(200, user)
 }
 
 // AddRelations will make two users friends.
-func (ps *PhoneServer) AddRelations(w http.ResponseWriter, r *http.Request) {
+func (ps *PhoneServer) AddRelations(c *gin.Context) {
 
 }

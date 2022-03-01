@@ -2,7 +2,7 @@ package Stores
 
 import (
 	"database/sql"
-	"phonebook-api/model"
+	"go-api-friends/model"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -14,15 +14,17 @@ type UserStore interface {
 	GetAllUser() []*model.User
 	AddUser(string, string)
 	DeleteUser(int) error
+	ValidateUser(string, string) *model.User
+	UpdateUser(user *model.User)
 }
 
 // NewStore first implementation with array
-func NewStore() UserStore {
-	return &arrayUserStore{}
-}
+//func NewStore() UserStore {
+//	return &arrayUserStore{}
+//}
 
-// NewTestStore test implementation with mysql database.
-func NewTestStore() UserStore {
+// NewStore test implementation with mysql database.
+func NewStore() UserStore {
 	db, err := sql.Open("mysql", "admin:password@/go_api")
 
 	if err != nil {

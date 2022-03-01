@@ -2,7 +2,7 @@ package Stores
 
 import (
 	"errors"
-	"phonebook-api/model"
+	"go-api-friends/model"
 )
 
 // Implementation of UserStore based on slice.
