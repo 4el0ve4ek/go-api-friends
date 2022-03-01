@@ -1,4 +1,10 @@
 # go-api-friends
-I've written this API during learning Golang. It's odinary and simply rest-api without web interface. Structure - MVC. Used gorilla/mux and mysql database. 
+I've written this API during learning Golang. It's ordinary and simply rest-api without web interface. Structure - MVC. Used gin and mysql database. 
 
-Improvements: add more functional, write unit-tests, try to write another server with gRPC, hide passwords.
+Allow user to set status and city. Control authorization using Json Web Token(gin-jwt)
+
+Furthermore:
+- [x] authorization
+- [ ] unit-tests
+- [ ] follow to see status
+- [ ] refactor, probably...
