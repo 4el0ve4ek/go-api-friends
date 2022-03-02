@@ -12,18 +12,16 @@ import (
 type UserStore interface {
 	GetUser(int) (*model.User, error)
 	GetAllUser() []*model.User
-	AddUser(string, string)
+	AddUser(string, string) error
 	DeleteUser(int) error
 	ValidateUser(string, string) *model.User
 	UpdateUser(user *model.User)
+
+	AddFollower(int, int) error
+	GetSubs(int) []*model.User
 }
 
-// NewStore first implementation with array
-//func NewStore() UserStore {
-//	return &arrayUserStore{}
-//}
-
-// NewStore test implementation with mysql database.
+// NewStore implementation with mysql database.
 func NewStore() UserStore {
 	db, err := sql.Open("mysql", "admin:password@/go_api")
 

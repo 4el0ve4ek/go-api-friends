@@ -62,13 +62,23 @@ func (us *databaseUserStore) GetAllUser() []*model.User {
 	return result
 }
 
-// AddUser insert new user to db
-func (us *databaseUserStore) AddUser(name string, password string) {
-	_, err := us.db.Exec("INSERT INTO Users (name, password, status, city) VALUES (?, ?, '', '')", name, password)
+// AddUser insert new user to db if don't exist another user with such name
+func (us *databaseUserStore) AddUser(name string, password string) error {
+	var value int
+	err := us.db.QueryRow("SELECT COUNT(*) FROM Users WHERE name=?", name).Scan(&value)
+	if err != nil {
+		Log(err)
+		return errors.New("something goes wrong in db")
+	}
+	if value != 0 {
+		return errors.New("such username already used")
+	}
+	_, err = us.db.Exec("INSERT INTO Users (name, password, status, city) VALUES (?, ?, '', '')", name, password)
 
 	if err != nil {
 		Log(err)
 	}
+	return nil
 }
 
 // Log saves info about errors which occurred during work with db
@@ -81,6 +91,7 @@ func (us *databaseUserStore) DeleteUser(id int) error {
 	return errors.New("no such id")
 }
 
+// UpdateUser updates status and city of certain user
 func (us *databaseUserStore) UpdateUser(user *model.User) {
 	_, err := us.db.Exec("UPDATE Users SET city=?, status=? WHERE user_id=?", user.City, user.Status, user.UserID)
 	if err != nil {
@@ -88,6 +99,7 @@ func (us *databaseUserStore) UpdateUser(user *model.User) {
 	}
 }
 
+// ValidateUser returns user by his username and password
 func (us *databaseUserStore) ValidateUser(username string, password string) *model.User {
 	query := us.db.QueryRow("SELECT user_id, name, status, city FROM Users WHERE name=? AND password=?", username, password)
 	var id uint
@@ -96,4 +108,56 @@ func (us *databaseUserStore) ValidateUser(username string, password string) *mod
 		return nil
 	}
 	return &model.User{UserID: id, Name: username, Status: status, City: city}
+}
+
+func (us *databaseUserStore) AddFollower(followerId int, goalId int) error {
+	var value int
+	err := us.db.QueryRow("select COUNT(*) from Follower where follower_id=? and goal_id=?", followerId, goalId).Scan(&value)
+
+	if err != nil {
+		Log(err)
+		return errors.New("something goes wrong in db")
+	}
+	if value != 0 {
+		return errors.New("already followed")
+	}
+	_, err = us.db.Exec("insert into Follower(follower_id, goal_id) values(?, ?)", followerId, goalId)
+
+	if err != nil {
+		Log(err)
+		return errors.New("db error check log admin")
+	}
+	return nil
+}
+
+// GetSubs returns slice with users, which followed by certain user
+func (us *databaseUserStore) GetSubs(userId int) []*model.User {
+	rows, err := us.db.Query("select user_id, name, status,city  from Users where user_id in (select goal_id from Follower where follower_id=?)", userId)
+
+	if err != nil {
+		Log(err)
+		return make([]*model.User, 0)
+	}
+
+	defer rows.Close()
+
+	var id uint
+	var name, status, city string
+	result := make([]*model.User, 0)
+
+	for rows.Next() {
+		err := rows.Scan(&id, &name, &status, &city)
+		if err != nil {
+			Log(err)
+			return make([]*model.User, 0)
+		}
+		result = append(result, &model.User{UserID: id, Name: name, Status: status, City: city})
+	}
+
+	if err = rows.Err(); err != nil {
+		Log(err)
+		return make([]*model.User, 0)
+	}
+
+	return result
 }

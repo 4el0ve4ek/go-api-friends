@@ -5,6 +5,6 @@ Allow user to set status and city. Control authorization using Json Web Token(gi
 
 Furthermore:
 - [x] authorization
+- [x] follow up to see status
 - [ ] unit-tests
-- [ ] follow to see status
 - [ ] refactor, probably...

@@ -36,8 +36,10 @@ func main() {
 	authorized.GET("/refresh_token", server.RefreshHandler)
 	authorized.Use(server.AuthMiddleWare())
 	{
-		authorized.POST("/city", server.ChangeCity)
-		authorized.POST("/status", server.ChangeStatus)
+		authorized.PUT("/city", server.ChangeCity)
+		authorized.PUT("/status", server.ChangeStatus)
+		authorized.POST("/follow", server.AddRelations)
+		authorized.GET("/news", server.GetSubsNews)
 	}
 
 	port := os.Getenv("PORT")

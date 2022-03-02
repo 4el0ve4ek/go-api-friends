@@ -39,7 +39,11 @@ func (ps *PhoneServer) AddUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	ps.store.AddUser(user.Name, user.Password)
+	err := ps.store.AddUser(user.Name, user.Password)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 	c.String(200, "OK")
 }
 
@@ -56,6 +60,7 @@ func (ps *PhoneServer) GetUserFromCity(c *gin.Context) {
 	c.JSON(200, result)
 }
 
+// ChangeCity updates city of certain user.
 func (ps *PhoneServer) ChangeCity(c *gin.Context) {
 	type RequestedCity struct {
 		City string `json:"city"`
@@ -72,6 +77,7 @@ func (ps *PhoneServer) ChangeCity(c *gin.Context) {
 	c.JSON(200, user)
 }
 
+// ChangeStatus updates status of certain user.
 func (ps *PhoneServer) ChangeStatus(c *gin.Context) {
 	type RequestedStatus struct {
 		Status string `json:"status"`
@@ -88,7 +94,35 @@ func (ps *PhoneServer) ChangeStatus(c *gin.Context) {
 	c.JSON(200, user)
 }
 
-// AddRelations will make two users friends.
+// AddRelations subscribe sender to user in json in body.
 func (ps *PhoneServer) AddRelations(c *gin.Context) {
+	type RequestedId struct {
+		GoalId uint `json:"goal_id"`
+	}
+	var field RequestedId
+	if err := c.ShouldBindJSON(&field); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
+	user := ps.authMiddleWare.authMW.IdentityHandler(c).(*model.User)
+	err := ps.store.AddFollower(int(user.UserID), int(field.GoalId))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, user)
+}
+
+// GetSubsNews return statuses of users, followed by sender.
+func (ps *PhoneServer) GetSubsNews(c *gin.Context) {
+	user := ps.authMiddleWare.authMW.IdentityHandler(c).(*model.User)
+	subs := ps.store.GetSubs(int(user.UserID))
+	headlines := make(map[string]string)
+	for _, user := range subs {
+		headlines[user.Name] = user.Status
+	}
+	c.JSON(200, headlines)
 }
